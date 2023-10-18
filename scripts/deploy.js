@@ -7,10 +7,11 @@ async function main() {
   await stakingNFTRarity.waitForDeployment();
   console.log("Staking NFT deployed to:", stakingNFTRarity.target);
 
-  //Chunk tiers to 500 to avoid gas limit
-  const chunkedTiers = _.chunk(tiers, 500);
+  //Chunk tiers to 2000 to avoid gas limit
+  const chunkedTiers = _.chunk(tiers, 2000);
   for (let i = 0; i < chunkedTiers.length; i++) {
-    await stakingNFTRarity.addTiers(chunkedTiers[i]);
+    const tx = await stakingNFTRarity.addTiers(chunkedTiers[i]);
+    await tx.wait();
     console.log(`Tiers set for chunk ${i + 1} of ${chunkedTiers.length}`);
   }
 

@@ -13,7 +13,7 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
     using Counters for Counters.Counter;
     Counters.Counter internal _tokenIdCounter;
     mapping(uint256 => uint256) public tierToDailyAPR; /// tokens per day
-    uint256[] public tiers;
+    uint8[] public tiers;
 
     constructor() {
         tierToDailyAPR[1] = 172 * 1e18;
@@ -82,7 +82,7 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
         delete tiers;
     }
 
-    function addTiers(uint256[] memory _tiers) external onlyOwner {
+    function addTiers(uint8[] memory _tiers) external onlyOwner {
         for (uint256 i = 0; i < _tiers.length; i++) {
             tiers.push(_tiers[i]);
         }
@@ -107,6 +107,7 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
     }
 
     function stake(uint256 _nftId) external nonReentrant {
+        require(_nftId > 0, "Invalid NFT id");
         uint256 currentTimestamp = block.timestamp;
         require(enabled, "Staking is disabled");
         require(
@@ -176,14 +177,16 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
     function getCurrentInterestById(
         uint256 _id
     ) public view returns (uint256 interest) {
-        require(_id >= 1, "Invalid id");
         StakeDetail memory stakeDetail = idToStakeDetail[_id];
         uint256 currentTimestamp = block.timestamp;
         uint256 stakedTimestamp = stakeDetail.startAt;
+        if(currentTimestamp <= stakedTimestamp) {
+            return 0;
+        }
         uint256 totalDays = (currentTimestamp.sub(stakedTimestamp)).div(
             ONE_DAY_IN_SECONDS
         );
-        interest = totalDays.mul(tierToDailyAPR[tiers[_id-1]]).sub(stakeDetail.claimedAmount);
+        interest = totalDays.mul(tierToDailyAPR[uint256(tiers[stakeDetail.stakedNFTId-1])]).sub(stakeDetail.claimedAmount);
         return interest;
     }
 
