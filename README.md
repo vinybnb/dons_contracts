@@ -1,4 +1,4 @@
-# PrivateSale Project 
+# NFT Staking by Rarity Project 
 Test
 ```shell
 npx hardhat test

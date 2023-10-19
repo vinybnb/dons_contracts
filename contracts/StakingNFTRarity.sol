@@ -14,14 +14,22 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
     Counters.Counter internal _tokenIdCounter;
     mapping(uint256 => uint256) public tierToDailyAPR; /// tokens per day
     uint8[] public tiers;
+    uint256 public collectionSize;
+
+    struct NFTDetail {
+        uint256 tokenId;
+        uint8 tier;
+    }
 
     constructor() {
         tierToDailyAPR[1] = 172 * 1e18;
         tierToDailyAPR[2] = 103 * 1e18;
         tierToDailyAPR[3] = 69 * 1e18;
 
-        tokenContract = IERC20(0x6584f00fb92218A6A92978a91b6185555a432519);
-        nftContract = IERC721(0x3CBc6322495D1871Dd6f178c06bcfa6d82662CF3);
+        collectionSize = 3333;
+
+        tokenContract = IERC20(0xC8c60ff8e5a8B29f9f779C1E83F71fFCc7CC7e81);
+        nftContract = IERC721(0xc340BbB7BbB4f4a7d4A74E84EB99d40d91DF060E);
     }
 
     event Staked(
@@ -48,7 +56,7 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
 
     mapping(uint256 => StakeDetail) public idToStakeDetail;
 
-    uint256 constant ONE_DAY_IN_SECONDS = 24 * 60 * 60;
+    uint256 ONE_DAY_IN_SECONDS = 24 * 60 * 60;
     uint256 constant ONE_HOUR_IN_SECONDS = 60 * 60;
 
     bool public enabled = true;
@@ -66,9 +74,12 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
         Withdrawn
     }
 
-    function setDailyAPRPerNFT(uint256 _tier, uint256 _dailyAPR) external onlyOwner {
+    function setDailyAPRPerNFT(
+        uint256 _tier,
+        uint256 _dailyAPR
+    ) external onlyOwner {
         tierToDailyAPR[_tier] = _dailyAPR;
-    } 
+    }
 
     function setEnabled(bool _enabled) external onlyOwner {
         enabled = _enabled;
@@ -94,16 +105,14 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
         tokenContract = IERC20(_newTokenAddress);
     }
 
+    function setOneDayInSeconds(uint256 _newOneDayInSeconds) external onlyOwner {
+        ONE_DAY_IN_SECONDS = _newOneDayInSeconds;
+    }
+
     function getStakeDetail(
         uint256 _id
     ) external view returns (StakeDetail memory) {
         return idToStakeDetail[_id];
-    }
-
-    function getDailyAPRById(
-        uint256 _id
-    ) external view returns (uint256) {
-        return tierToDailyAPR[tiers[_id-1]];
     }
 
     function stake(uint256 _nftId) external nonReentrant {
@@ -180,13 +189,15 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
         StakeDetail memory stakeDetail = idToStakeDetail[_id];
         uint256 currentTimestamp = block.timestamp;
         uint256 stakedTimestamp = stakeDetail.startAt;
-        if(currentTimestamp <= stakedTimestamp) {
+        if (currentTimestamp <= stakedTimestamp) {
             return 0;
         }
         uint256 totalDays = (currentTimestamp.sub(stakedTimestamp)).div(
             ONE_DAY_IN_SECONDS
         );
-        interest = totalDays.mul(tierToDailyAPR[uint256(tiers[stakeDetail.stakedNFTId-1])]).sub(stakeDetail.claimedAmount);
+        interest = totalDays
+            .mul(tierToDailyAPR[uint256(tiers[stakeDetail.stakedNFTId - 1])])
+            .sub(stakeDetail.claimedAmount);
         return interest;
     }
 
@@ -221,5 +232,35 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
         uint256 _amount
     ) external onlyOwner returns (bool) {
         return tokenContract.transfer(_recipient, _amount);
+    }
+
+    function getNFTsOfOwner(
+        address _addr
+    ) external view returns (NFTDetail[] memory) {
+        bool[] memory temp = new bool[](collectionSize);
+        uint256 count = 0;
+
+        unchecked {
+            for (uint i = 1; i <= collectionSize; i++) {
+                try nftContract.ownerOf(i) returns (address owner) {
+                    if (owner == _addr) {
+                        count++;
+                        temp[i - 1] = true;
+                    }
+                } catch {
+                    break;
+                }
+            }
+
+            NFTDetail[] memory tokenIds = new NFTDetail[](count);
+            count = 0;
+            for (uint i = 1; i <= collectionSize; i++) {
+                if (temp[i - 1]) {
+                    tokenIds[count++].tokenId = i;
+                    tokenIds[count - 1].tier = tiers[i - 1];
+                }
+            }
+            return tokenIds;
+        }
     }
 }

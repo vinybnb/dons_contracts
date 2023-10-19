@@ -80,6 +80,7 @@ contract StakingNFTRarityTest is Test {
         );
         assertEq(token.balanceOf(USER), 2 * 103 * 1e18);
         assertEq(nft.ownerOf(3), USER);
+        console.log(stakingNFTRarity.getNFTsOfOwner(USER)[0].tokenId);
         vm.stopPrank();
     }
 }

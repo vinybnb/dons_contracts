@@ -10,4 +10,10 @@ contract MockERC721 is ERC721 {
     function mint(address _to, uint256 _tokenId) public {
         _mint(_to, _tokenId);
     }
+
+    function mintBatch(address _to, uint256 _quantity) public {
+        for (uint256 i = 0; i < _quantity; i++) {
+            _mint(_to, i);
+        }
+    }
 }
