@@ -50,7 +50,8 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
     IERC721 public nftContract;
     IERC20 public tokenContract;
 
-    address[] internal _addresses;
+    uint256 public stakeHolderCount;
+    mapping(address => bool) public isStakeHolder;
 
     mapping(address => uint256[]) private addressToIds;
 
@@ -105,10 +106,6 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
         tokenContract = IERC20(_newTokenAddress);
     }
 
-    function setOneDayInSeconds(uint256 _newOneDayInSeconds) external onlyOwner {
-        ONE_DAY_IN_SECONDS = _newOneDayInSeconds;
-    }
-
     function getStakeDetail(
         uint256 _id
     ) external view returns (StakeDetail memory) {
@@ -134,6 +131,18 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
         );
         idToStakeDetail[currentId] = newStakeDetail;
 
+        uint256[] storage stakeIds = addressToIds[msg.sender];
+        uint256 stakingIds = 0;
+        for (uint256 i = 0; i < stakeIds.length; i++) {
+            if (idToStakeDetail[stakeIds[i]].status == StakeStatus.Staked) {
+                stakingIds++;
+            }
+        }
+        
+        if (stakingIds == 0) {
+            stakeHolderCount++;
+            isStakeHolder[msg.sender] = true;
+        }
         addressToIds[msg.sender].push(currentId);
         _tokenIdCounter.increment();
         emit Staked(msg.sender, currentId, _nftId);
@@ -181,6 +190,18 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
             );
         }
         stakeDetail.status = StakeStatus.Withdrawn;
+        ///Count StakeStatus.Staked in addressToIds[msg.sender]
+        uint256[] storage stakeIds = addressToIds[msg.sender];
+        uint256 remainingStakeIds = 0;
+        for (uint256 i = 0; i < stakeIds.length; i++) {
+            if (idToStakeDetail[stakeIds[i]].status == StakeStatus.Staked) {
+                remainingStakeIds++;
+            }
+        }
+        if (remainingStakeIds == 0) {
+            stakeHolderCount--;
+            isStakeHolder[msg.sender] = false;
+        }
     }
 
     function getCurrentInterestById(
@@ -217,14 +238,6 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
         address _address
     ) external view returns (uint256[] memory) {
         return addressToIds[_address];
-    }
-
-    function getStakeHoldersCount() external view returns (uint256) {
-        return _addresses.length;
-    }
-
-    function getAddressByIndex(uint256 _index) external view returns (address) {
-        return _addresses[_index];
     }
 
     function transfer(
