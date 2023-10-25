@@ -16,6 +16,9 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
     uint8[] public tiers;
     uint256 public collectionSize;
 
+    uint256 public stakeHolderCount;
+    mapping(address => bool) public isStakeHolder;
+
     struct NFTDetail {
         uint256 tokenId;
         uint8 tier;
@@ -49,9 +52,6 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
 
     IERC721 public nftContract;
     IERC20 public tokenContract;
-
-    uint256 public stakeHolderCount;
-    mapping(address => bool) public isStakeHolder;
 
     mapping(address => uint256[]) private addressToIds;
 
@@ -130,15 +130,7 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
             StakeStatus.Staked
         );
         idToStakeDetail[currentId] = newStakeDetail;
-
-        uint256[] storage stakeIds = addressToIds[msg.sender];
-        uint256 stakingIds = 0;
-        for (uint256 i = 0; i < stakeIds.length; i++) {
-            if (idToStakeDetail[stakeIds[i]].status == StakeStatus.Staked) {
-                stakingIds++;
-            }
-        }
-        
+        uint256 stakingIds = countStakingIds(msg.sender);
         if (stakingIds == 0) {
             stakeHolderCount++;
             isStakeHolder[msg.sender] = true;
@@ -146,6 +138,17 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
         addressToIds[msg.sender].push(currentId);
         _tokenIdCounter.increment();
         emit Staked(msg.sender, currentId, _nftId);
+    }
+
+    function countStakingIds(address _owner) public view returns (uint256) {
+        uint256[] storage stakeIds = addressToIds[_owner];
+        uint256 stakingIds = 0;
+        for (uint256 i = 0; i < stakeIds.length; i++) {
+            if (idToStakeDetail[stakeIds[i]].status == StakeStatus.Staked) {
+                stakingIds++;
+            }
+        }
+        return stakingIds;
     }
 
     function claim(uint256 _stakeId) external nonReentrant {
@@ -190,15 +193,8 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
             );
         }
         stakeDetail.status = StakeStatus.Withdrawn;
-        ///Count StakeStatus.Staked in addressToIds[msg.sender]
-        uint256[] storage stakeIds = addressToIds[msg.sender];
-        uint256 remainingStakeIds = 0;
-        for (uint256 i = 0; i < stakeIds.length; i++) {
-            if (idToStakeDetail[stakeIds[i]].status == StakeStatus.Staked) {
-                remainingStakeIds++;
-            }
-        }
-        if (remainingStakeIds == 0) {
+        uint256 remainingStakeIds = countStakingIds(msg.sender);
+         if (remainingStakeIds == 0) {
             stakeHolderCount--;
             isStakeHolder[msg.sender] = false;
         }
@@ -213,12 +209,13 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
         if (currentTimestamp <= stakedTimestamp) {
             return 0;
         }
-        uint256 totalDays = (currentTimestamp.sub(stakedTimestamp)).div(
-            ONE_DAY_IN_SECONDS
+        uint256 tokensPerSeconds = tierToDailyAPR[
+            uint256(tiers[stakeDetail.stakedNFTId - 1])
+        ] / ONE_DAY_IN_SECONDS;
+        uint256 totalSeconds = currentTimestamp.sub(stakedTimestamp);
+        interest = totalSeconds.mul(tokensPerSeconds).sub(
+            stakeDetail.claimedAmount
         );
-        interest = totalDays
-            .mul(tierToDailyAPR[uint256(tiers[stakeDetail.stakedNFTId - 1])])
-            .sub(stakeDetail.claimedAmount);
         return interest;
     }
 

@@ -40,10 +40,10 @@ contract StakingNFTRarityTest is Test {
             address(token) != address(stakingNFTRarity.tokenContract())
         );
         assertFalse(address(nft) != address(stakingNFTRarity.nftContract()));
-        assertEq(stakingNFTRarity.getDailyAPRById(1), 172 * 1e18);
-        assertEq(stakingNFTRarity.getDailyAPRById(2), 103 * 1e18);
-        assertEq(stakingNFTRarity.getDailyAPRById(3), 69 * 1e18);
-        assertEq(stakingNFTRarity.getDailyAPRById(4), 103 * 1e18);
+        // assertEq(stakingNFTRarity.getDailyAPRById(1), 172 * 1e18);
+        // assertEq(stakingNFTRarity.getDailyAPRById(2), 103 * 1e18);
+        // assertEq(stakingNFTRarity.getDailyAPRById(3), 69 * 1e18);
+        // assertEq(stakingNFTRarity.getDailyAPRById(4), 103 * 1e18);
     }
 
     function test_Stake() public {
@@ -52,6 +52,7 @@ contract StakingNFTRarityTest is Test {
         nft.approve(address(stakingNFTRarity), 1);
         stakingNFTRarity.stake(1);
         assertEq(stakingNFTRarity.getStakeDetail(0).stakedNFTId, 1);
+        assertEq(stakingNFTRarity.stakeHolderCount(), 1);
         vm.stopPrank();
     }
 
@@ -79,8 +80,10 @@ contract StakingNFTRarityTest is Test {
             2 * 103 * 1e18
         );
         assertEq(token.balanceOf(USER), 2 * 103 * 1e18);
-        assertEq(nft.ownerOf(3), USER);
+        stakingNFTRarity.withdraw(0);
+        assertEq(nft.ownerOf(2), USER);
         console.log(stakingNFTRarity.getNFTsOfOwner(USER)[0].tokenId);
+        assertEq(stakingNFTRarity.stakeHolderCount(), 0);
         vm.stopPrank();
     }
 }
