@@ -3,7 +3,13 @@ const tiers = require("./tiers.json");
 const _ = require("lodash");
 
 async function main() {
-  const stakingNFTRarity = await ethers.deployContract('StakingNFTRarity');
+  const tokenContract = "0xC8c60ff8e5a8B29f9f779C1E83F71fFCc7CC7e81";
+  const nftContract = "0xc340BbB7BbB4f4a7d4A74E84EB99d40d91DF060E";
+
+  const stakingNFTRarity = await ethers.deployContract('StakingNFTRarity', [
+    tokenContract,
+    nftContract,
+  ]);
   await stakingNFTRarity.waitForDeployment();
   console.log("Staking NFT deployed to:", stakingNFTRarity.target);
 

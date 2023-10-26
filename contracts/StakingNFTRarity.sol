@@ -24,15 +24,15 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
         uint8 tier;
     }
 
-    constructor() {
+    constructor(address _tokenContract, address _nftContract) {
         tierToDailyAPR[1] = 172 * 1e18;
         tierToDailyAPR[2] = 103 * 1e18;
         tierToDailyAPR[3] = 69 * 1e18;
 
         collectionSize = 3333;
 
-        tokenContract = IERC20(0xC8c60ff8e5a8B29f9f779C1E83F71fFCc7CC7e81);
-        nftContract = IERC721(0xc340BbB7BbB4f4a7d4A74E84EB99d40d91DF060E);
+        tokenContract = IERC20(_tokenContract);
+        nftContract = IERC721(_nftContract);
     }
 
     event Staked(
