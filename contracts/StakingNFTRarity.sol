@@ -24,12 +24,12 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
         uint8 tier;
     }
 
-    constructor(address _tokenContract, address _nftContract) {
+    constructor(uint256 _collectionSize, address _tokenContract, address _nftContract) {
         tierToDailyAPR[1] = 172 * 1e18;
         tierToDailyAPR[2] = 103 * 1e18;
         tierToDailyAPR[3] = 69 * 1e18;
 
-        collectionSize = 3333;
+        collectionSize = _collectionSize;
 
         tokenContract = IERC20(_tokenContract);
         nftContract = IERC721(_nftContract);
@@ -80,6 +80,10 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
         uint256 _dailyAPR
     ) external onlyOwner {
         tierToDailyAPR[_tier] = _dailyAPR;
+    }
+
+    function setCollectionSize(uint256 _collectionSize) external onlyOwner {
+        collectionSize = _collectionSize;
     }
 
     function setEnabled(bool _enabled) external onlyOwner {

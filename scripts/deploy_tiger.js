@@ -1,5 +1,5 @@
 const { ethers, upgrades } = require("hardhat");
-const tiers = require("./tiers.json");
+const tiers = require("./tiger_tiers.json");
 const _ = require("lodash");
 
 async function main() {
@@ -7,13 +7,15 @@ async function main() {
   const nftContract = "0xc340BbB7BbB4f4a7d4A74E84EB99d40d91DF060E";
 
   const stakingNFTRarity = await ethers.deployContract('StakingNFTRarity', [
+    2222,
     tokenContract,
     nftContract,
   ]);
   await stakingNFTRarity.waitForDeployment();
-  console.log("Staking NFT deployed to:", stakingNFTRarity.target);
+  console.log("Staking Tiger NFT deployed to:", stakingNFTRarity.target);
 
   //Chunk tiers to 2000 to avoid gas limit
+  console.log(`Setting tiers for ${tiers.length} NFTS`);
   const chunkedTiers = _.chunk(tiers, 2000);
   for (let i = 0; i < chunkedTiers.length; i++) {
     const tx = await stakingNFTRarity.addTiers(chunkedTiers[i]);
