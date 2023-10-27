@@ -24,7 +24,11 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
         uint8 tier;
     }
 
-    constructor(uint256 _collectionSize, address _tokenContract, address _nftContract) {
+    constructor(
+        uint256 _collectionSize,
+        address _tokenContract,
+        address _nftContract
+    ) {
         tierToDailyAPR[1] = 172 * 1e18;
         tierToDailyAPR[2] = 103 * 1e18;
         tierToDailyAPR[3] = 69 * 1e18;
@@ -174,6 +178,27 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
         }
     }
 
+    function claimAll() external nonReentrant {
+        uint256[] storage stakeIds = addressToIds[msg.sender];
+        uint256 accumulatedInterest = 0;
+        for (uint256 i; i < stakeIds.length; i++) {
+            uint256 stakeId = stakeIds[i];
+            StakeDetail storage stakeDetail = idToStakeDetail[stakeId];
+            uint256 currentInterest = getCurrentInterestById(stakeId);
+            require(
+                stakeDetail.staker == msg.sender,
+                "You are not the staker of this stake"
+            );
+            if (currentInterest > 0) {
+                accumulatedInterest = accumulatedInterest.add(currentInterest);
+                stakeDetail.claimedAmount = stakeDetail.claimedAmount.add(
+                    currentInterest
+                );
+            }
+        }
+        tokenContract.transfer(msg.sender, accumulatedInterest);
+    }
+
     function withdraw(uint256 _stakeId) external nonReentrant {
         StakeDetail storage stakeDetail = idToStakeDetail[_stakeId];
         require(
@@ -198,7 +223,7 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
         }
         stakeDetail.status = StakeStatus.Withdrawn;
         uint256 remainingStakeIds = countStakingIds(msg.sender);
-         if (remainingStakeIds == 0) {
+        if (remainingStakeIds == 0) {
             stakeHolderCount--;
             isStakeHolder[msg.sender] = false;
         }
@@ -208,6 +233,9 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
         uint256 _id
     ) public view returns (uint256 interest) {
         StakeDetail memory stakeDetail = idToStakeDetail[_id];
+        if (stakeDetail.status == StakeStatus.Withdrawn) {
+            return 0;
+        }
         uint256 currentTimestamp = block.timestamp;
         uint256 stakedTimestamp = stakeDetail.startAt;
         if (currentTimestamp <= stakedTimestamp) {

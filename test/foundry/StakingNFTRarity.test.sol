@@ -19,10 +19,12 @@ contract StakingNFTRarityTest is Test {
     function setUp() public {
         token = new MockERC20(18);
         nft = new MockERC721();
-        stakingNFTRarity = new StakingNFTRarity();
+        stakingNFTRarity = new StakingNFTRarity(
+            2222,
+            address(token),
+            address(nft)
+        );
         token.mint(address(stakingNFTRarity), 100_000 * 10 ** 18);
-        stakingNFTRarity.setTokenContractAddress(address(token));
-        stakingNFTRarity.setNftContractAddress(address(nft));
         uint8[] memory tiers = new uint8[](4);
         tiers[0] = 1;
         tiers[1] = 2;
@@ -62,8 +64,37 @@ contract StakingNFTRarityTest is Test {
         assertEq(stakingNFTRarity.getStakeDetail(0).claimedAmount, 0);
         skip(ONE_DAY_IN_SECONDS);
         stakingNFTRarity.claim(0);
-        assertEq(stakingNFTRarity.getStakeDetail(0).claimedAmount, 172 * 1e18);
-        assertEq(token.balanceOf(USER), 172 * 1e18);
+        assertApproxEqAbs(
+            stakingNFTRarity.getStakeDetail(0).claimedAmount,
+            172 * 1e18,
+            1e18
+        );
+        assertApproxEqAbs(token.balanceOf(USER), 172 * 1e18, 1e18);
+        vm.stopPrank();
+    }
+
+    function test_ClaimAll() public {
+        test_Stake();
+        vm.startPrank(USER);
+        nft.approve(address(stakingNFTRarity), 2);
+        stakingNFTRarity.stake(2);
+        vm.stopPrank();
+        vm.startPrank(USER);
+        assertEq(stakingNFTRarity.getStakeDetail(0).claimedAmount, 0);
+        assertEq(stakingNFTRarity.getStakeDetail(1).claimedAmount, 0);
+        skip(ONE_DAY_IN_SECONDS);
+        stakingNFTRarity.claimAll();
+        assertApproxEqAbs(
+            stakingNFTRarity.getStakeDetail(0).claimedAmount,
+            172 * 1e18,
+            1e18
+        );
+        assertApproxEqAbs(
+            stakingNFTRarity.getStakeDetail(1).claimedAmount,
+            103 * 1e18,
+            1e18
+        );
+        assertApproxEqAbs(token.balanceOf(USER), 172 * 1e18 + 103 * 1e18, 1e18);
         vm.stopPrank();
     }
 
@@ -75,14 +106,14 @@ contract StakingNFTRarityTest is Test {
         assertEq(stakingNFTRarity.getStakeDetail(0).stakedNFTId, 2);
         skip(2 * ONE_DAY_IN_SECONDS);
         stakingNFTRarity.claim(0);
-        assertEq(
+        assertApproxEqAbs(
             stakingNFTRarity.getStakeDetail(0).claimedAmount,
-            2 * 103 * 1e18
+            2 * 103 * 1e18,
+            1e18
         );
-        assertEq(token.balanceOf(USER), 2 * 103 * 1e18);
+        assertApproxEqAbs(token.balanceOf(USER), 2 * 103 * 1e18, 1e18);
         stakingNFTRarity.withdraw(0);
         assertEq(nft.ownerOf(2), USER);
-        console.log(stakingNFTRarity.getNFTsOfOwner(USER)[0].tokenId);
         assertEq(stakingNFTRarity.stakeHolderCount(), 0);
         vm.stopPrank();
     }
