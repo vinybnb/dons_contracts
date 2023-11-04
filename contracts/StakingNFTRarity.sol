@@ -120,32 +120,35 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
         return idToStakeDetail[_id];
     }
 
-    function stake(uint256 _nftId) external nonReentrant {
-        require(_nftId > 0, "Invalid NFT id");
+    function stake(uint256[] memory _nftIds) external nonReentrant {
         uint256 currentTimestamp = block.timestamp;
-        require(enabled, "Staking is disabled");
-        require(
-            nftContract.ownerOf(_nftId) == msg.sender,
-            "You are not the owner of this nft"
-        );
-        nftContract.transferFrom(msg.sender, address(this), _nftId);
-        uint256 currentId = _tokenIdCounter.current();
-        StakeDetail memory newStakeDetail = StakeDetail(
-            msg.sender,
-            currentTimestamp,
-            _nftId,
-            0,
-            StakeStatus.Staked
-        );
-        idToStakeDetail[currentId] = newStakeDetail;
-        uint256 stakingIds = countStakingIds(msg.sender);
-        if (stakingIds == 0) {
-            stakeHolderCount++;
-            isStakeHolder[msg.sender] = true;
+        for (uint256 i; i < _nftIds.length; i++) {
+            uint256 _nftId = _nftIds[i];
+            require(_nftId > 0, "Invalid NFT id");
+            require(enabled, "Staking is disabled");
+            require(
+                nftContract.ownerOf(_nftId) == msg.sender,
+                "You are not the owner of this nft"
+            );
+            nftContract.transferFrom(msg.sender, address(this), _nftId);
+            uint256 currentId = _tokenIdCounter.current();
+            StakeDetail memory newStakeDetail = StakeDetail(
+                msg.sender,
+                currentTimestamp,
+                _nftId,
+                0,
+                StakeStatus.Staked
+            );
+            idToStakeDetail[currentId] = newStakeDetail;
+            uint256 stakingIds = countStakingIds(msg.sender);
+            if (stakingIds == 0) {
+                stakeHolderCount++;
+                isStakeHolder[msg.sender] = true;
+            }
+            addressToIds[msg.sender].push(currentId);
+            _tokenIdCounter.increment();
+            emit Staked(msg.sender, currentId, _nftId);
         }
-        addressToIds[msg.sender].push(currentId);
-        _tokenIdCounter.increment();
-        emit Staked(msg.sender, currentId, _nftId);
     }
 
     function countStakingIds(address _owner) public view returns (uint256) {
@@ -199,33 +202,36 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
         tokenContract.transfer(msg.sender, accumulatedInterest);
     }
 
-    function withdraw(uint256 _stakeId) external nonReentrant {
-        StakeDetail storage stakeDetail = idToStakeDetail[_stakeId];
-        require(
-            stakeDetail.status == StakeStatus.Staked,
-            "Stake is already claimed"
-        );
-        require(
-            stakeDetail.staker == msg.sender,
-            "You are not the staker of this stake"
-        );
-        nftContract.transferFrom(
-            address(this),
-            msg.sender,
-            stakeDetail.stakedNFTId
-        );
-        uint256 currentInterest = getCurrentInterestById(_stakeId);
-        if (currentInterest > 0) {
-            tokenContract.transfer(msg.sender, currentInterest);
-            stakeDetail.claimedAmount = stakeDetail.claimedAmount.add(
-                currentInterest
+    function withdraw(uint256[]  memory _stakeIds) external nonReentrant {
+        for(uint256 i; i < _stakeIds.length; i++) {
+            uint256 _stakeId = _stakeIds[i];
+            StakeDetail storage stakeDetail = idToStakeDetail[_stakeId];
+            require(
+                stakeDetail.status == StakeStatus.Staked,
+                "Stake is already claimed"
             );
-        }
-        stakeDetail.status = StakeStatus.Withdrawn;
-        uint256 remainingStakeIds = countStakingIds(msg.sender);
-        if (remainingStakeIds == 0) {
-            stakeHolderCount--;
-            isStakeHolder[msg.sender] = false;
+            require(
+                stakeDetail.staker == msg.sender,
+                "You are not the staker of this stake"
+            );
+            nftContract.transferFrom(
+                address(this),
+                msg.sender,
+                stakeDetail.stakedNFTId
+            );
+            uint256 currentInterest = getCurrentInterestById(_stakeId);
+            if (currentInterest > 0) {
+                tokenContract.transfer(msg.sender, currentInterest);
+                stakeDetail.claimedAmount = stakeDetail.claimedAmount.add(
+                    currentInterest
+                );
+            }
+            stakeDetail.status = StakeStatus.Withdrawn;
+            uint256 remainingStakeIds = countStakingIds(msg.sender);
+            if (remainingStakeIds == 0) {
+                stakeHolderCount--;
+                isStakeHolder[msg.sender] = false;
+            }
         }
     }
 
