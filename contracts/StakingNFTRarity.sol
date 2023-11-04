@@ -202,7 +202,7 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
         tokenContract.transfer(msg.sender, accumulatedInterest);
     }
 
-    function withdraw(uint256[]  memory _stakeIds) external nonReentrant {
+    function unstake(uint256[]  memory _stakeIds) external nonReentrant {
         for(uint256 i; i < _stakeIds.length; i++) {
             uint256 _stakeId = _stakeIds[i];
             StakeDetail storage stakeDetail = idToStakeDetail[_stakeId];

@@ -22,7 +22,7 @@ async function main() {
     await tx.wait();
     console.log(`Tiers set for chunk ${i + 1} of ${chunkedTiers.length}`);
   }
-  ///  npx hardhat verify 0xC4d8eC8665781B73Ec9B49d7d4dc8922EEECF9f6 --network testnet 3333 "0xC8c60ff8e5a8B29f9f779C1E83F71fFCc7CC7e81" "0xc340BbB7BbB4f4a7d4A74E84EB99d40d91DF060E"
+  ///  npx hardhat verify 0x90d910b9EE9458D93cC9BeD791e122668a153FEA --network testnet 3333 "0xC8c60ff8e5a8B29f9f779C1E83F71fFCc7CC7e81" "0xc340BbB7BbB4f4a7d4A74E84EB99d40d91DF060E"
 }
 
 // We recommend this pattern to be able to use async/await everywhere
