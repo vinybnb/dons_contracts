@@ -4,7 +4,7 @@ dotenv.config()
 
 const {  PRIVATE_KEY } = process.env;
 module.exports = {
-  solidity: "0.8.19",
+  solidity: "0.8.23",
   defaultNetwork: "hardhat",
   networks: {
     localhost: {
