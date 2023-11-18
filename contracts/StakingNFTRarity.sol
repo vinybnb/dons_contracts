@@ -45,8 +45,6 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
         uint256 nftId
     );
 
-    event RequestClaimed(address indexed staker, uint256 indexed stakeId);
-
     event Claimed(
         address indexed staker,
         uint256 indexed stakeId,
@@ -54,15 +52,23 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
         uint256 nftId
     );
 
-    IERC721 public nftContract;
-    IERC20 public tokenContract;
+    event AllClaimed(address indexed staker, uint256 amount);
+
+    event UnStaked(address indexed staker, uint256 indexed stakeId, uint256 nftId, uint256 amount);
+
+    event CollectionSizeSetted(uint256 collectionSize);
+
+    event EnabledSetted(bool enabled);
+
+    IERC721 public immutable nftContract;
+    IERC20 public immutable tokenContract;
 
     mapping(address => uint256[]) private addressToIds;
 
     mapping(uint256 => StakeDetail) public idToStakeDetail;
 
-    uint256 ONE_DAY_IN_SECONDS = 24 * 60 * 60;
-    uint256 constant ONE_HOUR_IN_SECONDS = 60 * 60;
+    uint256 private constant ONE_DAY_IN_SECONDS = 24 * 60 * 60;
+    uint256 private constant ONE_HOUR_IN_SECONDS = 60 * 60;
 
     bool public enabled = true;
 
@@ -88,14 +94,12 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
 
     function setCollectionSize(uint256 _collectionSize) external onlyOwner {
         collectionSize = _collectionSize;
+        emit CollectionSizeSetted(_collectionSize);
     }
 
     function setEnabled(bool _enabled) external onlyOwner {
         enabled = _enabled;
-    }
-
-    function setNftContractAddress(address _nftAddress) external onlyOwner {
-        nftContract = IERC721(_nftAddress);
+        emit EnabledSetted(_enabled);
     }
 
     function resetTiers() external onlyOwner {
@@ -106,12 +110,6 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
         for (uint256 i = 0; i < _tiers.length; i++) {
             tiers.push(_tiers[i]);
         }
-    }
-
-    function setTokenContractAddress(
-        address _newTokenAddress
-    ) external onlyOwner {
-        tokenContract = IERC20(_newTokenAddress);
     }
 
     function getStakeDetail(
@@ -152,6 +150,7 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
     }
 
     function countStakingIds(address _owner) public view returns (uint256) {
+        require(_owner != address(0), "Invalid address");
         uint256[] storage stakeIds = addressToIds[_owner];
         uint256 stakingIds = 0;
         for (uint256 i = 0; i < stakeIds.length; i++) {
@@ -179,6 +178,12 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
                 currentInterest
             );
         }
+        emit Claimed(
+            msg.sender,
+            _stakeId,
+            currentInterest,
+            stakeDetail.stakedNFTId
+        );
     }
 
     function claimAll() external nonReentrant {
@@ -200,10 +205,11 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
             }
         }
         tokenContract.transfer(msg.sender, accumulatedInterest);
+        emit AllClaimed(msg.sender, accumulatedInterest);
     }
 
-    function unstake(uint256[]  memory _stakeIds) external nonReentrant {
-        for(uint256 i; i < _stakeIds.length; i++) {
+    function unstake(uint256[] memory _stakeIds) external nonReentrant {
+        for (uint256 i; i < _stakeIds.length; i++) {
             uint256 _stakeId = _stakeIds[i];
             StakeDetail storage stakeDetail = idToStakeDetail[_stakeId];
             require(
@@ -227,6 +233,7 @@ contract StakingNFTRarity is Ownable, ReentrancyGuard {
                 );
             }
             stakeDetail.status = StakeStatus.Withdrawn;
+            emit UnStaked(msg.sender, _stakeId, stakeDetail.stakedNFTId, currentInterest);
             uint256 remainingStakeIds = countStakingIds(msg.sender);
             if (remainingStakeIds == 0) {
                 stakeHolderCount--;
