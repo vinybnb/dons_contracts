@@ -52,7 +52,9 @@ contract StakingNFTRarityTest is Test {
         stakingNFTRarity.setEnabled(true);
         vm.startPrank(USER);
         nft.approve(address(stakingNFTRarity), 1);
-        stakingNFTRarity.stake(1);
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = 1;
+        stakingNFTRarity.stake(ids);
         assertEq(stakingNFTRarity.getStakeDetail(0).stakedNFTId, 1);
         assertEq(stakingNFTRarity.stakeHolderCount(), 1);
         vm.stopPrank();
@@ -77,7 +79,9 @@ contract StakingNFTRarityTest is Test {
         test_Stake();
         vm.startPrank(USER);
         nft.approve(address(stakingNFTRarity), 2);
-        stakingNFTRarity.stake(2);
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = 2;
+        stakingNFTRarity.stake(ids);
         vm.stopPrank();
         vm.startPrank(USER);
         assertEq(stakingNFTRarity.getStakeDetail(0).claimedAmount, 0);
@@ -102,7 +106,9 @@ contract StakingNFTRarityTest is Test {
         stakingNFTRarity.setEnabled(true);
         vm.startPrank(USER);
         nft.approve(address(stakingNFTRarity), 2);
-        stakingNFTRarity.stake(2);
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = 2; 
+        stakingNFTRarity.stake(ids);
         assertEq(stakingNFTRarity.getStakeDetail(0).stakedNFTId, 2);
         skip(2 * ONE_DAY_IN_SECONDS);
         stakingNFTRarity.claim(0);
@@ -112,7 +118,9 @@ contract StakingNFTRarityTest is Test {
             1e18
         );
         assertApproxEqAbs(token.balanceOf(USER), 2 * 103 * 1e18, 1e18);
-        stakingNFTRarity.withdraw(0);
+        uint256[] memory unstakeIds = new uint256[](1);
+        unstakeIds[0] = 0;
+        stakingNFTRarity.unstake(unstakeIds);
         assertEq(nft.ownerOf(2), USER);
         assertEq(stakingNFTRarity.stakeHolderCount(), 0);
         vm.stopPrank();
